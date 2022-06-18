@@ -23,7 +23,7 @@ interface TranslationService {
         @Field("q") textToTranslate:String,
         @Field("source") source:String,
         @Field("target") target:String,
-        @Field("target") format:String
+        @Field("format") format:String
     ):Translation
 
     companion object {
