@@ -30,6 +30,7 @@ class TranslateFragment : Fragment() {
                     val inputText by translateViewModel.textToTranslate.observeAsState(
                         TextFieldValue("")
                     )
+                    val translatedText by translateViewModel.textTranslated.observeAsState("")
                     val languages by translateViewModel.languagesToDisplay.observeAsState(initial = listOf())
                     val targetLanguageIndex by translateViewModel.targetLanguageIndex
 
@@ -40,8 +41,10 @@ class TranslateFragment : Fragment() {
                         languages = languages,
                         targetLanguageIndex = targetLanguageIndex,
                         onTargetLanguageSelected = translateViewModel::onTargetLanguageChange,
-                        onTranslateClick = {},
-                        translatedText = ""
+                        onTranslateClick = {
+                               translateViewModel.translateText()
+                        },
+                        translatedText = translatedText
                     )
                 }
             }

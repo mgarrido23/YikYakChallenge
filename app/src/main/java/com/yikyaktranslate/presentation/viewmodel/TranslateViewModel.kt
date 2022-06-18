@@ -6,24 +6,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.*
 import com.yikyaktranslate.R
+import com.yikyaktranslate.model.FormatTranslationResponseEnum
 import com.yikyaktranslate.model.Language
+import com.yikyaktranslate.model.TranslationRequest
+import com.yikyaktranslate.repositories.TranslationRepository
 import com.yikyaktranslate.service.face.TranslationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
 class TranslateViewModel(application: Application) : AndroidViewModel(application) {
-
+    private val translationRepository:TranslationRepository = TranslationRepository()
     // Code for the source language that we are translating from; currently hardcoded to English
     private val sourceLanguageCode: String = application.getString(R.string.source_language_code)
 
     // List of Languages that we get from the back end
     private val languages: MutableStateFlow<List<Language>> by lazy {
-        MutableStateFlow<List<Language>>(listOf()).also {
-            loadLanguages()
-        }
+        MutableStateFlow<List<Language>>(listOf())
     }
 
     // List of names of languages to display to user
@@ -36,28 +38,42 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
     private val _textToTranslate = MutableStateFlow(TextFieldValue(""))
     val textToTranslate = _textToTranslate.asLiveData()
 
+    private val _textTranslated =  MutableStateFlow("")
+    val textTranslated = _textTranslated.asLiveData()
+
+    init {
+        getLanguages()
+    }
+
+
     /**
      * Loads the languages from our service
      */
-    private fun loadLanguages() {
-        val translationService = TranslationService.create()
-        val call = translationService.getLanguages()
-        call.enqueue(object : Callback<List<Language>> {
-            override fun onResponse(
-                call: Call<List<Language>>,
-                response: Response<List<Language>>
-            ) {
-                if (response.body() != null) {
-                    languages.value = response.body()!!
-                }
-            }
-
-            override fun onFailure(call: Call<List<Language>>, t: Throwable) {
-                t.message?.let { Log.e(javaClass.name, it) }
-                languages.value = listOf()
-            }
-        })
+    private suspend fun loadLanguages() {
+        try {
+            val languagesList = translationRepository.obtainLanguages()
+            languages.value = languagesList
+        }catch (e:Exception){
+            Log.e("Error in loadLanguages", e.message.toString())
+        }
     }
+
+    private suspend fun translate(){
+        try {
+            val request:TranslationRequest = TranslationRequest(
+                textToTranslate.value?.text?:"",
+                sourceLanguageCode,
+                languages.value[targetLanguageIndex.value].code,
+                FormatTranslationResponseEnum.TEXT.value
+            )
+            val textTranslated = translationRepository.translateText(request)
+            _textTranslated.value = textTranslated.translatedText
+        }catch (e:Exception){
+            Log.e("Error in translation", e.message.toString())
+        }
+    }
+
+
 
     /**
      * Updates the data when there's new text from the user
@@ -75,6 +91,26 @@ class TranslateViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun onTargetLanguageChange(newLanguageIndex: Int) {
         targetLanguageIndex.value = newLanguageIndex
+    }
+
+    fun translateText(){
+        viewModelScope.launch {
+            try {
+                translate()
+            }catch (e:Exception){
+                Log.e("Error in translation suspend fun call", e.message.toString())
+            }
+        }
+    }
+
+    fun getLanguages(){
+        viewModelScope.launch {
+            try {
+                loadLanguages()
+            }catch (e:Exception){
+                Log.e("Error in get languages suspend fun call", e.message.toString())
+            }
+        }
     }
 
 }

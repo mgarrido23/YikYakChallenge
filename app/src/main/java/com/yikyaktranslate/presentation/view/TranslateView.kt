@@ -24,8 +24,8 @@ fun TranslateView(
     languages: List<String>?,
     targetLanguageIndex: Int,
     onTargetLanguageSelected: (Int) -> Unit,
-    onTranslateClick: () -> Unit, // TODO: implement
-    translatedText: String // TODO: implement
+    onTranslateClick: () -> Unit,
+    translatedText: String
 ) {
     Column(
         modifier = Modifier
